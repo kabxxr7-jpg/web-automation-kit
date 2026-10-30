@@ -1,10 +1,12 @@
 import { parseArgs } from "node:util";
 import { launchBrowser } from "./browser";
+import { checkLinks, writeReports } from "./check-links";
 import { extractDelayed, extractProducts } from "./extract";
 import { fillForm } from "./fill-form";
 import { startFixtureServer } from "./fixture-server";
 import { RobotsDisallowedError, RobotsUnavailableError } from "./robots";
 import { snapshot } from "./snapshot";
+import { assertTestableHost, parseFields, RemoteHostRefusedError, testForm } from "./test-form";
 
 const USAGE = `web-automation-kit
 
@@ -13,9 +15,12 @@ Usage:
   kit extract <url> --out <dir> [--mode list|delayed] [--delay-ms 500] [--retries 2] [--timeout-ms 10000] [--max-pages 50]
   kit fill-form <form-url> --csv <rows.csv> --log <results.jsonl> [--delay-ms 500] [--skip-failed] [--timeout-ms 5000]
   kit snapshot <url> --out <dir> [--timeout-ms 15000]
+  kit check-links <start-url> --out <dir> [--max-pages 50] [--delay-ms 300] [--timeout-ms 8000]
+  kit test-form <page-url> --fields name=Ada,email=ada@example.com [--expect-text "Thank you"] [--form-selector "#contact"] [--i-own-this-site]
 
 Common: --headed (show the browser). robots.txt is always respected; there is no switch to turn that off.
-Exit codes: 0 all good, 1 some rows failed, 2 refused (robots.txt) or bad usage, 3 unexpected error.
+Exit codes: 0 all good, 1 some rows failed / a broken internal link / the form test failed, 2 refused (robots.txt, or a non-local site without --i-own-this-site) or bad usage, 3 unexpected error.
+check-links writes link-report.md and link-report.csv. test-form sends one REAL submission and only runs on localhost unless you confirm you own the site.
 `;
 
 const num = (v: string | undefined, d: number): number => {
@@ -38,6 +43,11 @@ async function main(): Promise<number> {
       retries: { type: "string" },
       "timeout-ms": { type: "string" },
       "max-pages": { type: "string" },
+      fields: { type: "string", multiple: true },
+      field: { type: "string", multiple: true },
+      "expect-text": { type: "string" },
+      "form-selector": { type: "string" },
+      "i-own-this-site": { type: "boolean" },
       "skip-failed": { type: "boolean" },
       headed: { type: "boolean" },
       help: { type: "boolean", short: "h" },
@@ -59,6 +69,24 @@ async function main(): Promise<number> {
   if (!target) {
     console.error(`Missing URL.\n\n${USAGE}`);
     return 2;
+  }
+
+  if (command === "check-links") {
+    if (!values.out) throw new Error("--out <dir> is required");
+    const result = await checkLinks({
+      startUrl: target,
+      maxPages: num(values["max-pages"], 50),
+      delayMs: num(values["delay-ms"], 300),
+      timeoutMs: num(values["timeout-ms"], 8000),
+    });
+    const files = await writeReports(result, values.out);
+    console.log(JSON.stringify({ ...result.summary, markdown: files.markdownPath, csv: files.csvPath }, null, 2));
+    return result.summary.brokenInternal > 0 ? 1 : 0;
+  }
+
+  if (command === "test-form") {
+    // Refuse a non-local site BEFORE starting a browser or touching the network.
+    assertTestableHost(target, Boolean(values["i-own-this-site"]));
   }
 
   const browser = await launchBrowser({ headless: !values.headed });
@@ -98,6 +126,21 @@ async function main(): Promise<number> {
       return 0;
     }
 
+    if (command === "test-form") {
+      const fields = parseFields([...(values.fields ?? []), ...(values.field ?? [])]);
+      if (Object.keys(fields).length === 0) throw new Error("--fields name=value,name=value (or --field name=value) is required");
+      const r = await testForm({
+        ...common,
+        pageUrl: target,
+        fields,
+        expectText: values["expect-text"],
+        formSelector: values["form-selector"],
+        iOwnThisSite: Boolean(values["i-own-this-site"]),
+      });
+      console.log(JSON.stringify(r, null, 2));
+      return r.status === "ok" ? 0 : 1;
+    }
+
     console.error(`Unknown command "${command}".\n\n${USAGE}`);
     return 2;
   } finally {
@@ -108,7 +151,7 @@ async function main(): Promise<number> {
 main().then(
   (code) => process.exit(code),
   (e: unknown) => {
-    if (e instanceof RobotsDisallowedError || e instanceof RobotsUnavailableError) {
+    if (e instanceof RobotsDisallowedError || e instanceof RobotsUnavailableError || e instanceof RemoteHostRefusedError) {
       console.error(e.message);
       process.exit(2);
     }

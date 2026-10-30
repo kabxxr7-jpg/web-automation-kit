@@ -1,3 +1,4 @@
 # robots.txt of the fictional fixture site
 User-agent: *
 Disallow: /private/
+Disallow: /site/private/
