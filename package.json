@@ -1,0 +1,21 @@
+{
+  "name": "web-automation-kit",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Small, tested browser-automation starter (paginated extraction, form filling, page snapshots) run against a local fixture site.",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "kit": "tsx src/cli.ts"
+  },
+  "dependencies": {
+    "playwright-core": "^1.64.1"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.12"
+  }
+}

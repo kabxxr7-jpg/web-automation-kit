@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Sign-up form (fictional fixture)</title>
+  <style>
+    body { font: 16px/1.5 system-ui, sans-serif; max-width: 34rem; margin: 2rem auto; padding: 0 1rem; }
+    label { display: block; margin: 0.75rem 0; }
+    input[type=text], select { display: block; width: 100%; padding: 0.4rem; margin-top: 0.2rem; }
+  </style>
+</head>
+<body>
+  <h1>Sign up (fictional Harbor &amp; Pine club)</h1>
+  <!-- novalidate on purpose: the SERVER validates, so a bad row produces a real server error message. -->
+  <form id="signup" method="post" action="/submit" novalidate>
+    <label>Name <input name="name" type="text"></label>
+    <label>Email <input name="email" type="text"></label>
+    <label>Plan
+      <select name="plan">
+        <option value="">Choose a plan</option>
+        <option value="basic">Basic</option>
+        <option value="pro">Pro</option>
+        <option value="team">Team</option>
+      </select>
+    </label>
+    <label><input type="checkbox" name="newsletter"> Send me the newsletter</label>
+    <button type="submit">Save</button>
+  </form>
+</body>
+</html>

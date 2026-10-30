@@ -1,0 +1,7 @@
+id,name,email,plan,newsletter
+r1,Ada Example,ada@example.test,pro,yes
+r2,Grace Sample,grace@example.test,basic,no
+r3,Missing Email,,team,yes
+r4,Bad Plan,bad@example.test,enterprise,no
+r5,Alan Demo,alan@example.test,team,yes
+r6,Katherine Test,katherine@example.test,,no

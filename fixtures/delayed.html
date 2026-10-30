@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Weekly report (fictional fixture, loads data late)</title>
+  <style>body { font: 16px/1.5 system-ui, sans-serif; max-width: 34rem; margin: 2rem auto; padding: 0 1rem; }</style>
+</head>
+<body>
+  <h1>Weekly report</h1>
+  <p id="status">Loading…</p>
+  <ul id="data" data-ready="false"></ul>
+  <script>
+    // The list is empty until the (deliberately slow) API answers. A script that reads too early gets nothing.
+    fetch("/api/slow-data")
+      .then(function (r) { return r.json(); })
+      .then(function (items) {
+        var ul = document.getElementById("data");
+        items.forEach(function (it) {
+          var li = document.createElement("li");
+          li.dataset.id = it.id;
+          li.textContent = it.label + ": " + it.value;
+          ul.appendChild(li);
+        });
+        ul.dataset.ready = "true";
+        document.getElementById("status").textContent = "Loaded";
+      });
+  </script>
+</body>
+</html>
